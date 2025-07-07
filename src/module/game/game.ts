@@ -1,9 +1,9 @@
-import { Card, GameResult, Suit, Value } from "../../interfaces";
+import { Card, Suit, Value } from "../../interfaces";
 
 type Deck = Card[];
 
 const SUITS: Suit[] = ['H', 'D', 'C', 'S'];
-const VALUES: Value[] = ['6', '7', '8', '9', '10', '11', '12', '13'];
+const VALUES: Value[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'];
 
 function generateDeck(): Deck {
   const deck: Deck = [];
@@ -16,12 +16,6 @@ function generateDeck(): Deck {
 };
 
 
-function getPredfinedPoint(cat: string): number {
-  if (cat == '1') return 8;
-  else if (cat == '2') return 9;
-  else if (cat == '3') return 10;
-  else return 11;
-}
 
 function shuffleDeck(deck: Deck): Deck {
   for (let i = deck.length - 1; i > 0; i--) {
@@ -31,48 +25,13 @@ function shuffleDeck(deck: Deck): Deck {
   return deck;
 };
 
-export function play32CardRound(): GameResult {
+export function play3CardJudgementRound(): string[] {
   let deck = shuffleDeck(generateDeck());
-
-  let roundCards: { [key: string]: string[] } = { 1: [], 2: [], 3: [], 4: [] };
-  let roundPoints: { [key: string]: number } = { 1: 0, 2: 0, 3: 0, 4: 0 };
-  let roundWisePoints : { [key: string]: number[] } = { 1: [], 2: [], 3: [], 4: []};
-  let activeKeys: string[] = ['1', '2', '3', '4'];
-
-  for (let key of activeKeys) {
-    const card: Card | undefined = deck.shift();
-    if (card) {
-      roundCards[key].push(`${card?.suit}${card.value}`);
-      const point = getPredfinedPoint(key) + Number(card.value);
-      roundWisePoints[key].push(point);
-      roundPoints[key] += point;
-    }
-  };
-
-  while (true) {
-    const maxPoint = Math.max(...Object.values(roundPoints));
-    const tiedKeys = Object.keys(roundPoints).filter(key => roundPoints[key] === maxPoint);
-
-    if (tiedKeys.length === 1) {
-      break;
-    }
-
-    for (let key of tiedKeys) {
-      const card = deck.shift();
-      if (!card) continue;
-      roundCards[key].push(`${card.suit}${card.value}`);
-      const finalPoint = Number(card.value);
-      roundPoints[key] += finalPoint;
-      roundWisePoints[key].push(finalPoint);
-    }
+  const cards = [];
+  while(cards.length < 3){
+    const randomIndex = Math.floor(Math.random() * deck.length);
+    const card = deck.splice(randomIndex, 1)[0];
+    cards.push(card);
   }
-
-  const finalMax = Math.max(...Object.values(roundPoints));
-  const finalWinner = Object.keys(roundPoints).find(key => roundPoints[key] === finalMax);
-
-  return {
-    cards: roundCards,
-    roundWisePoints,
-    winner: Number(finalWinner)
-  };
+  return cards.map(e=> `${e.suit}${e.value}`);
 }

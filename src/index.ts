@@ -5,12 +5,12 @@ import http from 'http';
 import { initSocket } from './socket';
 import { routes } from './router/routes';
 import dotenv from 'dotenv';
+dotenv.config();
 import { createLogger } from './utilities/logger';
 import { checkDatabaseConnection, createTables } from './utilities/db-connection';
 import { initializeRedis } from './utilities/redis-connection';
 import { connect } from './utilities/amqp';
 
-dotenv.config();
 const port = process.env.PORT || 4200;
 const logger = createLogger('Server');
 

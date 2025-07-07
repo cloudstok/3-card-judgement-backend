@@ -1,11 +1,5 @@
-export interface GameResult {
-  cards: { [key: string]: string[]}; 
-  roundWisePoints: {[key: string]: number[]};
-  winner: null | number;
-}
-
 export type BetResult = {
-    chip: number;
+    cards: number[];
     cat: number;
     betAmount: number;
     winAmount: number;
@@ -44,8 +38,8 @@ export interface UserBet {
 export interface Settlement {
     bet_id: string;
     totalBetAmount: number;
-    userBets: UserBet[];
-    result?: unknown;
+    userBets: BetResult[];
+    result: string[];
     totalMaxMult: number;
     winAmount: number;
 }
@@ -53,13 +47,13 @@ export interface Settlement {
 export interface BetData {
     bet_id: string;
     totalBetAmount: number;
-    userBets: UserBet[];
+    userBets: UserBetData[];
 };
 
 export interface SingleBetData {
-    betAmount: number;
-    chip: number;
-    cat: number
+    betAmt: number;
+    cards: number[];
+    cat: 1 | 2;
 };
 
 export interface BetObject {
@@ -152,9 +146,20 @@ export interface LobbiesData {
 };
 
 export type Suit = 'H' | 'D' | 'C' | 'S';
-export type Value = '6' | '7' | '8' | '9' | '10' | '11' | '12' | '13';
+export type Value = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | '13';
 
 export interface Card {
   value: Value;
   suit: Suit;
+}
+
+interface UserBetData {
+    cards: number[];
+    cat: 1 | 2;
+    betAmt: number;
+}
+
+export interface BetReqData {
+    lobbyId: number;
+    userBets: UserBetData[]
 }

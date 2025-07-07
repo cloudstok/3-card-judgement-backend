@@ -1,13 +1,14 @@
 import { Server, Socket } from 'socket.io';
 import { getUserDataFromSource } from './module/players/player-event';
 import { eventRouter } from './router/event-router';
-import { messageRouter } from './router/message-router';
 import { setCache, deleteCache } from './utilities/redis-connection';
 import { getMatchHistory } from './module/bets/bets-session';
+import { initRounds } from './module/lobbies/lobby-event';
 
 
 export const initSocket = (io: Server): void => {
-  eventRouter(io);
+
+  initRounds(io);
 
   io.on('connection', async (socket: Socket) => {
 
@@ -39,7 +40,7 @@ export const initSocket = (io: Server): void => {
     await setCache(`PL:${socket.id}`, JSON.stringify({ ...userData, socketId: socket.id }), 3600);
 
     await getMatchHistory(socket, userData.userId, userData.operatorId, token);
-    messageRouter(io, socket);
+    eventRouter(io, socket);
 
     socket.on('disconnect', async () => {
       await deleteCache(`PL:${socket.id}`);

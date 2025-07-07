@@ -1,11 +1,11 @@
 import amqp, { Channel, Options } from "amqplib";
 import { createLogger } from "../utilities/logger";
-
 const rabbitMQLogger = createLogger("Queue");
-
 let pubChannel: Channel | null = null;
 let subChannel: Channel | null = null;
 let connected = false;
+import dotenv from 'dotenv';
+dotenv.config();
 
 const AMQP_CONNECTION_STRING = process.env.AMQP_CONNECTION_STRING;
 const AMQP_EXCHANGE_NAME = process.env.AMQP_EXCHANGE_NAME;

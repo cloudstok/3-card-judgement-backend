@@ -2,9 +2,8 @@ import { Server } from 'socket.io';
 import { insertLobbies } from './lobbies-db';
 import { createLogger } from '../../utilities/logger';
 import { setCurrentLobby } from '../bets/bets-session';
-import { play32CardRound } from '../game/game';
+import { play3CardJudgementRound} from '../game/game';
 import { settleBet } from '../bets/bets-session';
-import { GameResult } from '../../interfaces';
 
 const logger = createLogger('lobbies', 'jsonl');
 
@@ -50,7 +49,7 @@ const initLobby = async (io: Server): Promise<void> => {
   setCurrentLobby(recurLobbyData);
 
   const start_delay = 15;
-  const result = play32CardRound();
+  const result = play3CardJudgementRound();
   const end_delay = 5;
 
   for (let x = start_delay; x >= 0; x--) {
@@ -69,46 +68,13 @@ const initLobby = async (io: Server): Promise<void> => {
   recurLobbyData.status = 2;
   setCurrentLobby(recurLobbyData);
 
-  const dynamicData: GameResult = {
-    cards: { 1: [], 2: [], 3: [], 4: [] },
-    roundWisePoints: { 1: [0], 2: [0], 3: [0], 4: [0] },
-    winner: null
-  }
-
-  const playerIds = Object.keys(result.cards);
-  const maxRounds = Math.max(...Object.values(result.cards).map(cards => cards.length));
-  let actions = [];
-
-  for (let i = 0; i < maxRounds; i++) {
-    for (let playerId of playerIds) {
-      const card = result.cards[playerId][i];
-      const point = result.roundWisePoints[playerId][i];
-      if (card !== undefined) {
-        actions.push(async () => {
-          dynamicData.cards[playerId].push(card);
-          io.emit('cards', `${lobbyId}:${JSON.stringify(dynamicData)}:RESULT`);
-          dynamicData.roundWisePoints[playerId][0] += point;
-          await sleep(1000);
-          io.emit('cards', `${lobbyId}:${JSON.stringify(dynamicData)}:RESULT`);
-        });
-      }
-    }
+  const finalCards = [];
+  
+  for(let x of result){
+    finalCards.push(x);
+    io.emit('cards', `${lobbyId}:${JSON.stringify(finalCards)}:RESULT`);
+    await sleep(1000);
   };
-
-  const runActionsSequentially = async () => {
-    for (let index = 0; index < actions.length; index++) {
-      const action = actions[index];
-      action();
-      await sleep(2000);
-
-      if (index === actions.length - 1) {
-        dynamicData.winner = result.winner;
-        io.emit('cards', `${lobbyId}:${JSON.stringify(dynamicData)}:RESULT`);
-      }
-    }
-  };
-
-  await runActionsSequentially();
 
   await settleBet(io, result, lobbyId);
 
