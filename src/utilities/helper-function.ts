@@ -31,7 +31,7 @@ export const getUserIP = (socket: any): string => {
 
 
 export const getBetResult = (betAmount: number, cards: number[], cat: number, result: string[]): BetResult => {
-   
+
     const resultData: BetResult = {
         cards,
         cat,
@@ -41,21 +41,21 @@ export const getBetResult = (betAmount: number, cards: number[], cat: number, re
         status: 'loss'
     };
 
-    const resultCardNumber = result.map(e=> Number(e.slice(1, result.length)));
+    const resultCardNumber = result.map(e => Number(e.slice(1, result.length)));
     let isWin: Boolean = false;
 
-    resultCardNumber.forEach(card=> {
-        if(cards.includes(card)) isWin = true;
+    resultCardNumber.forEach(card => {
+        if (cards.includes(card)) isWin = true;
     }); // Common for both cats if cat 1 then anyone condition will fall for win, if cat 2 and no condition matches cat 2 will win
 
     if (cat == 1 && isWin) {
         resultData.status = 'win';
-        resultData.winAmount = Math.min(betAmount * resultData.mult, appConfig.maxCashoutAmount);
+        resultData.winAmount = Number(Math.min(betAmount * resultData.mult, appConfig.maxCashoutAmount).toFixed(2));
     }
 
-    if(cat == 2 && !isWin){
+    if (cat == 2 && !isWin) {
         resultData.status = 'win';
-        resultData.winAmount = betAmount + (betAmount / (resultData.mult - 1));
+        resultData.winAmount = Number(betAmount + (betAmount / (resultData.mult - 1)).toFixed(2));
     }
 
     return resultData;
