@@ -38,11 +38,11 @@ export const placeBet = async (socket: Socket, betData: BetReqData) => {
         userBets.forEach((bet) => {
             const { cards, cat, betAmt } = bet;
             const data: SingleBetData = { betAmt, cards, cat };
-
+            console.log(lobbyData);
             if (betAmt <= 0 ||
                 betAmt < appConfig.minBetAmount ||
                 betAmt > appConfig.maxBetAmount ||
-                lobbyData.lobbyId !== lobbyId || lobbyData.status !== 1) isBetInvalid = 1;
+                lobbyData.lobbyId != lobbyId || lobbyData.status != 1) isBetInvalid = 1;
 
 
             if (cards.length < 3) isBetInvalid = 1;

@@ -20,7 +20,7 @@ export const addSettleBet = async (settlements: Settlement[]): Promise<void> => 
           JSON.stringify(userBets),
           JSON.stringify(result),
           totalMaxMult,
-          winAmount
+          (winAmount).toFixed(2)
         ]);
       }
 
