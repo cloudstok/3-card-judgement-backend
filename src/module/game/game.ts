@@ -28,10 +28,9 @@ function shuffleDeck(deck: Deck): Deck {
 export function play3CardJudgementRound(): string[] {
   let deck = shuffleDeck(generateDeck());
   const cards = [];
-  while(cards.length < 3){
-    const randomIndex = Math.floor(Math.random() * deck.length);
-    const card = deck.splice(randomIndex, 1)[0];
-    cards.push(card);
+  while (cards.length < 3) {
+    const card = deck.pop();
+    if (card) cards.push(card);
   }
-  return cards.map(e=> `${e.suit}${e.value}`);
+  return cards.map(e => `${e.suit}${e.value}`);
 }

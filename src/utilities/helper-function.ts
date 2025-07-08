@@ -55,7 +55,7 @@ export const getBetResult = (betAmount: number, cards: number[], cat: number, re
 
     if (cat == 2 && !isWin) {
         resultData.status = 'win';
-        resultData.winAmount = Number(betAmount + (betAmount / (resultData.mult - 1)).toFixed(2));
+        resultData.winAmount = Number((betAmount + (betAmount / (resultData.mult - 1))).toFixed(2));
     }
 
     return resultData;
