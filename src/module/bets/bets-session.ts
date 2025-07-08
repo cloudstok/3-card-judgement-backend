@@ -19,91 +19,96 @@ export const setCurrentLobby = (data: LobbiesData) => {
 };
 
 export const placeBet = async (socket: Socket, betData: BetReqData) => {
-    const playerDetails = await getCache(`PL:${socket.id}`);
-    if (!playerDetails) {
-        return socket.emit('message', { eventName: 'betError', data: { message: 'Invalid Player Details', status: false } });
+    try {
+        const playerDetails = await getCache(`PL:${socket.id}`);
+        if (!playerDetails) {
+            return socket.emit('message', { eventName: 'betError', data: { message: 'Invalid Player Details', status: false } });
+        }
+
+        const parsedPlayerDetails = JSON.parse(playerDetails);
+        const { userId, operatorId, token, game_id, balance } = parsedPlayerDetails;
+        const { lobbyId, userBets } = betData;
+        const bet_id = `BT:${lobbyId}:${userId}:${operatorId}`;
+        const betObj: BetObject = { bet_id, token, socket_id: parsedPlayerDetails.socketId, game_id, lobby_id: lobbyId };
+
+        let totalBetAmount = 0;
+        let isBetInvalid = 0;
+        const bets: SingleBetData[] = [];
+
+        userBets.forEach((bet) => {
+            const { cards, cat, betAmt } = bet;
+            const data: SingleBetData = { betAmt, cards, cat };
+
+            if (betAmt <= 0 ||
+                betAmt < appConfig.minBetAmount ||
+                betAmt > appConfig.maxBetAmount ||
+                lobbyData.lobbyId !== lobbyId || lobbyData.status !== 1) isBetInvalid = 1;
+
+
+            if (cards.length < 3) isBetInvalid = 1;
+            if (![1, 2].includes(cat)) isBetInvalid = 1;
+
+            totalBetAmount += betAmt;
+            bets.push(data);
+        });
+
+        if (isBetInvalid) {
+            return logEventAndEmitResponse(socket, betObj, 'Invalid Bet', 'bet');
+        }
+
+        if (totalBetAmount > Number(balance)) {
+            return logEventAndEmitResponse(socket, betObj, 'Insufficient Balance', 'bet');
+        }
+
+        const ip = getUserIP(socket);
+
+        Object.assign(betObj, {
+            bet_amount: totalBetAmount,
+            userBets: bets,
+            ip
+        });
+
+
+        const webhookData = await updateBalanceFromAccount({
+            id: lobbyData.lobbyId,
+            bet_amount: totalBetAmount,
+            game_id,
+            bet_id,
+            ip,
+            user_id: userId
+        }, "DEBIT", { game_id, operatorId, token });
+
+        if (!webhookData.status) return socket.emit("betError", "Bet Cancelled By Upstream Server");
+        if (webhookData.txn_id) betObj.txn_id = webhookData.txn_id;
+
+        roundBets.push(betObj);
+        logger.info(JSON.stringify({ betObj }));
+
+        await insertBets({
+            totalBetAmount,
+            bet_id,
+            userBets: betObj.userBets!
+        });
+
+        parsedPlayerDetails.balance = Number(balance - totalBetAmount).toFixed(2);
+        await setCache(`PL:${socket.id}`, JSON.stringify(parsedPlayerDetails));
+
+        socket.emit("info", {
+            user_id: userId,
+            operator_id: operatorId,
+            balance: parsedPlayerDetails.balance
+        });
+
+        return socket.emit("bet", { message: "Bet Placed Successfully" });
+    } catch (err) {
+        console.error("Something went wrong", err);
+        socket.emit('betError', 'Something went wrong');
+        return;
     }
-
-    const parsedPlayerDetails = JSON.parse(playerDetails);
-    const { userId, operatorId, token, game_id, balance } = parsedPlayerDetails;
-    const { lobbyId, userBets } = betData;
-    const bet_id = `BT:${lobbyId}:${userId}:${operatorId}`;
-    const betObj: BetObject = { bet_id, token, socket_id: parsedPlayerDetails.socketId, game_id, lobby_id: lobbyId };
-
-    let totalBetAmount = 0;
-    let isBetInvalid = 0;
-    const bets: SingleBetData[] = [];
-
-    userBets.forEach((bet) => {
-        const { cards, cat, betAmt } = bet;
-        const data: SingleBetData = { betAmt, cards, cat };
-
-        if (betAmt <= 0 ||
-            betAmt < appConfig.minBetAmount ||
-            betAmt > appConfig.maxBetAmount ||
-            lobbyData.lobbyId !== lobbyId && lobbyData.status !== 0) isBetInvalid = 1;
-
-
-        if (cards.length < 3) isBetInvalid = 1;
-        if (![1, 2].includes(cat)) isBetInvalid = 1;
-
-        totalBetAmount += betAmt;
-        bets.push(data);
-    });
-
-    if (isBetInvalid) {
-        return logEventAndEmitResponse(socket, betObj, 'Invalid Bet', 'bet');
-    }
-
-    if (totalBetAmount > Number(balance)) {
-        return logEventAndEmitResponse(socket, betObj, 'Insufficient Balance', 'bet');
-    }
-
-    const ip = getUserIP(socket);
-
-    Object.assign(betObj, {
-        bet_amount: totalBetAmount,
-        userBets: bets,
-        ip
-    });
-
-
-    const webhookData = await updateBalanceFromAccount({
-        id: lobbyData.lobbyId,
-        bet_amount: totalBetAmount,
-        game_id,
-        bet_id,
-        ip,
-        user_id: userId
-    }, "DEBIT", { game_id, operatorId, token });
-
-    if (!webhookData.status) return socket.emit("betError", "Bet Cancelled By Upstream Server");
-    if (webhookData.txn_id) betObj.txn_id = webhookData.txn_id;
-
-    roundBets.push(betObj);
-    logger.info(JSON.stringify({ betObj }));
-
-    await insertBets({
-        totalBetAmount,
-        bet_id,
-        userBets: betObj.userBets!
-    });
-
-    parsedPlayerDetails.balance = Number(balance - totalBetAmount).toFixed(2);
-    await setCache(`PL:${socket.id}`, JSON.stringify(parsedPlayerDetails));
-
-    socket.emit("info", {
-        user_id: userId,
-        operator_id: operatorId,
-        balance: parsedPlayerDetails.balance
-    });
-
-    return socket.emit("bet", { message: "Bet Placed Successfully" });
 };
 
 export const settleBet = async (io: Server, result: string[], lobbyId: number): Promise<void> => {
     try {
-
         if (roundBets.length > 0) {
             const bets = roundBets;
             const settlements = [];
